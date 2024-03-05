@@ -3,69 +3,71 @@
 // Hover to view descriptions of existing attributes.
 // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Run Extension Standalone",
-      "type": "extensionHost",
-      "request": "launch",
-      "args": [
-        "--disable-extensions",
-        "--extensionDevelopmentPath=${workspaceFolder}/editors/code"
-      ],
-      "outFiles": ["${workspaceFolder}/editors/code/dist/**/*.js"],
-      "preLaunchTask": "npm: compile",
-      "env": {
-        "SERVER_PATH": "${input:binaryPath}"
-      }
-    },
-    {
-      "name": "Run Extension",
-      "type": "extensionHost",
-      "request": "launch",
-      "args": [
-        "--disable-extensions",
-        "--extensionDevelopmentPath=${workspaceFolder}/editors/code"
-      ],
-      "env": {
-        "CMAKE_BUILD_TYPE": "${command:cmake.buildType}"
-      },
-      "outFiles": ["${workspaceFolder}/editors/code/dist/**/*.js"],
-      "preLaunchTask": "Build Server and Extension"
-    },
-    {
-      "name": "Extension Tests",
-      "type": "extensionHost",
-      "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/editors/code",
-        "--extensionTestsPath=${workspaceFolder}/editors/code/dist/test/suite/index",
-        "${workspaceFolder}/editors/code/testFixture"
-      ],
-      "outFiles": ["${workspaceFolder}/editors/code/dist/**/*.js"],
-      "preLaunchTask": "tasks: watch-tests"
-    },
-    {
-      "name": "Win Attach to Server",
-      "type": "cppvsdbg",
-      "processId": "${command:pickProcess}",
-      "request": "attach"
-    }
-  ],
-  "inputs": [
-    {
-      "id": "binaryPath",
-      "type": "pickString",
-      "description": "Path to server binary",
-      "default": "cmake-build-relwithdebinfo-visual-studio/luau-lsp.exe",
-      "options": [
-        "cmake-build-debug-visual-studio/luau-lsp.exe",
-        "cmake-build-release-visual-studio/luau-lsp.exe",
-        "cmake-build-relwithdebinfo-visual-studio/luau-lsp.exe",
-        "cmake-build-debug/luau-lsp.exe",
-        "cmake-build-release/luau-lsp.exe",
-        "cmake-build-relwithdebinfo/luau-lsp.exe"
-      ]
-    }
-  ]
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Run Extension Standalone",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}/editors/code"
+			],
+			"outFiles": [
+				"${workspaceFolder}/editors/code/dist/**/*.js"
+			],
+			"preLaunchTask": "npm: compile",
+			"env": {
+				"SERVER_PATH": "${input:binaryPath}"
+			}
+		},
+		{
+			"name": "Run Extension",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}/editors/code"
+			],
+			"env": {
+				"CMAKE_BUILD_TYPE": "${command:cmake.buildType}"
+			},
+			"outFiles": [
+				"${workspaceFolder}/editors/code/dist/**/*.js"
+			],
+			"preLaunchTask": "Build Server and Extension"
+		},
+		{
+			"name": "Extension Tests",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/editors/code",
+				"--extensionTestsPath=${workspaceFolder}/editors/code/dist/test/suite/index",
+				"${workspaceFolder}/editors/code/testFixture"
+			],
+			"outFiles": [
+				"${workspaceFolder}/editors/code/dist/**/*.js"
+			],
+			"preLaunchTask": "tasks: watch-tests"
+		},
+		{
+			"name": "Win Attach to Server",
+			"type": "cppvsdbg",
+			"processId": "${command:pickProcess}",
+			"request": "attach"
+		}
+	],
+	"inputs": [
+		{
+			"id": "binaryPath",
+			"type": "pickString",
+			"description": "Path to server binary",
+			"default": "BUILD_/Release/luau-lsp.exe",
+			"options": [
+				"BUILD_/Release/luau-lsp.exe",
+				"BUILD_/Debug/luau-lsp.exe",
+			]
+		}
+	]
 }
