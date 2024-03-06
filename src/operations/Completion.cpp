@@ -747,7 +747,7 @@ std::vector<lsp::CompletionItem> WorkspaceFolder::completion(const lsp::Completi
 
                 return result;
             }
-            else if (tag == "Require")
+            else if (tag == "Require" || tag == "Shared")
             {
                 if (!contents.has_value())
                     return std::nullopt;

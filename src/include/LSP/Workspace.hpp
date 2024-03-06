@@ -46,6 +46,7 @@ public:
         , frontend(Luau::Frontend(
               &fileResolver, &fileResolver, {/* retainFullTypeGraphs: */ true, /* forAutocomplete: */ false, /* runLintChecks: */ false}))
     {
+        // frontend.rootUri = uri.toString();
         fileResolver.client = std::static_pointer_cast<BaseClient>(client);
         fileResolver.rootUri = uri;
     }

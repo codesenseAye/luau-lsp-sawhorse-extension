@@ -588,7 +588,7 @@ declare utf8: {
     offset: (string, number, number?) -> number?,
 }
 
-declare shared: any
+declare function shared(modulePath: string): any
 
 declare function collectgarbage(mode: "count"): number
 declare function warn<T...>(...: T...)

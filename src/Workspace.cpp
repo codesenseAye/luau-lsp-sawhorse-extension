@@ -236,6 +236,7 @@ void WorkspaceFolder::initialize()
     Luau::registerBuiltinGlobals(frontend, frontend.globalsForAutocomplete, /* typeCheckForAutocomplete = */ true);
 
     Luau::attachTag(Luau::getGlobalBinding(frontend.globalsForAutocomplete, "require"), "Require");
+    Luau::attachTag(Luau::getGlobalBinding(frontend.globalsForAutocomplete, "shared"), "Shared");
 
     if (client->definitionsFiles.empty())
         client->sendLogMessage(lsp::MessageType::Warning, "No definitions file provided by client");
