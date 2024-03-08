@@ -17,6 +17,7 @@ lsp::DefinitionResult WorkspaceFolder::gotoDefinition(const lsp::DefinitionParam
     auto position = textDocument->convertPosition(params.position);
 
     // Run the type checker to ensure we are up to date
+    std::cerr << "check strict for goto definition" << "\n";
     checkStrict(moduleName);
 
     auto sourceModule = frontend.getSourceModule(moduleName);
@@ -166,6 +167,7 @@ std::optional<lsp::Location> WorkspaceFolder::gotoTypeDefinition(const lsp::Type
     auto position = textDocument->convertPosition(params.position);
 
     // Run the type checker to ensure we are up to date
+    std::cerr << "check strict for type definition" << "\n";
     checkStrict(moduleName);
 
     auto sourceModule = frontend.getSourceModule(moduleName);

@@ -72,6 +72,7 @@ std::vector<Reference> WorkspaceFolder::findAllReferences(Luau::TypeId ty, std::
     for (const auto& moduleName : dependents)
     {
         // Run the typechecker over the dependency modules
+        std::cerr << "check strict for find all references" << "\n";
         checkStrict(moduleName);
         auto module = frontend.moduleResolverForAutocomplete.getModule(moduleName);
         if (!module)
@@ -142,6 +143,7 @@ std::vector<Reference> WorkspaceFolder::findAllTypeReferences(const Luau::Module
         result.emplace_back(Reference{moduleName, location});
 
     // Find the actual declaration location
+    std::cerr << "check strict for find all references 2" << "\n";
     checkStrict(moduleName);
     auto module = frontend.moduleResolverForAutocomplete.getModule(moduleName);
     if (!module)
@@ -394,6 +396,7 @@ lsp::ReferenceResult WorkspaceFolder::references(const lsp::ReferenceParams& par
 
     // Run the type checker to ensure we are up to date
     // We check for autocomplete here since autocomplete has stricter types
+    std::cerr << "check strict for references" << "\n";
     checkStrict(moduleName);
 
     auto sourceModule = frontend.getSourceModule(moduleName);

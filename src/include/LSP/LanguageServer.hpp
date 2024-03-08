@@ -49,6 +49,7 @@ public:
     void onNotification(const std::string& method, std::optional<json> params);
     void processInputLoop();
     bool requestedShutdown();
+    bool containsFolder(std::vector<std::string> folders, std::string path);
 
     // Dispatch handlers
 private:

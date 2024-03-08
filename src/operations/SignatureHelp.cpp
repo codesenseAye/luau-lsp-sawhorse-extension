@@ -39,6 +39,7 @@ std::optional<lsp::SignatureHelp> WorkspaceFolder::signatureHelp(const lsp::Sign
 
     // Run the type checker to ensure we are up to date
     // TODO: expressiveTypes - remove "forAutocomplete" once the types have been fixed
+    std::cerr << "check strict for signature help" << "\n";
     checkStrict(moduleName);
 
     auto sourceModule = frontend.getSourceModule(moduleName);

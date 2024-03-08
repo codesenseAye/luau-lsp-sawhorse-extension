@@ -5,6 +5,12 @@
 #include "glob/glob.hpp"
 #include "Luau/BuiltinDefinitions.h"
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#include <iostream>
+#endif
+
 LUAU_FASTFLAG(LuauStacklessTypeClone3)
 
 void WorkspaceFolder::openTextDocument(const lsp::DocumentUri& uri, const lsp::DidOpenTextDocumentParams& params)
@@ -107,10 +113,11 @@ bool WorkspaceFolder::isDefinitionFile(const std::filesystem::path& path, const 
 
 // Runs `Frontend::check` on the module and DISCARDS THE TYPE GRAPH.
 // Uses the diagnostic type checker, so strictness and DM awareness is not enforced
-// NOTE: do NOT use this if you later retrieve a ModulePtr (via frontend.moduleResolver.getModule). Instead use `checkStrict`
-// NOTE: use `frontend.parse` if you do not care about typechecking
+// !NOTE: do NOT use this if you later retrieve a ModulePtr (via frontend.moduleResolver.getModule). Instead use `checkStrict`
+// !NOTE: use `frontend.parse` if you do not care about typechecking
 Luau::CheckResult WorkspaceFolder::checkSimple(const Luau::ModuleName& moduleName, bool runLintChecks)
 {
+    std::cerr << "check simple" << "\n";
     // TODO: We do not need to store the type graphs. But it leads to a bad bug if we disable it so for now, we keep the type graphs
     // https://github.com/Roblox/luau/issues/975
     if (!FFlag::LuauStacklessTypeClone3)
@@ -137,6 +144,7 @@ Luau::CheckResult WorkspaceFolder::checkSimple(const Luau::ModuleName& moduleNam
 // can often be hit
 void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAutocomplete)
 {
+    std::cerr << "check strict" << "\n";
     // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
     // and then a call `Frontend::check(moduleName, { retainTypeGraphs: true })` will NOT actually
     // retain the type graph if the module is not marked dirty.
@@ -181,6 +189,7 @@ void WorkspaceFolder::indexFiles(const ClientConfiguration& config)
                 {
                     auto moduleName = fileResolver.getModuleName(Uri::file(next->path()));
 
+                    // std::cerr << "parse: " << moduleName.c_str() << "\n";
                     // Parse the module to infer require data
                     // We do not perform any type checking here
                     frontend.parse(moduleName);

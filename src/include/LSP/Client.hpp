@@ -28,6 +28,7 @@ class Client : public BaseClient
 public:
     lsp::ClientCapabilities capabilities;
     lsp::TraceValue traceMode = lsp::TraceValue::Off;
+    std::vector<std::string> workspaceFolders;
     /// A registered definitions file passed by the client
     std::vector<std::filesystem::path> definitionsFiles{};
     /// A registered documentation file passed by the client

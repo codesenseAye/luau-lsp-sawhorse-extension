@@ -393,6 +393,16 @@ bool LanguageServer::requestedShutdown()
     return shutdownRequested;
 }
 
+bool LanguageServer::containsFolder(std::vector<std::string> folder, std::string path) {
+    for (std::string existingPath : folder) {
+        if (strcmp(existingPath.c_str(), path.c_str()) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Dispatch handlers
 lsp::InitializeResult LanguageServer::onInitialize(const lsp::InitializeParams& params)
 {
@@ -407,11 +417,23 @@ lsp::InitializeResult LanguageServer::onInitialize(const lsp::InitializeParams& 
         for (auto& folder : params.workspaceFolders.value())
         {
             workspaceFolders.push_back(std::make_shared<WorkspaceFolder>(client, folder.name, folder.uri, defaultConfig));
+        
+            for (auto existingFolder : workspaceFolders) {
+                if (containsFolder(existingFolder->frontend.source.workspaceFolders, folder.uri.path)) continue;
+
+                existingFolder->frontend.source.workspaceFolders.emplace_back(folder.uri.path);
+            }
         }
     }
     else if (params.rootUri.has_value())
     {
         workspaceFolders.push_back(std::make_shared<WorkspaceFolder>(client, "$ROOT", params.rootUri.value(), defaultConfig));
+        
+        for (auto folder : workspaceFolders) {
+            if (containsFolder(folder->frontend.source.workspaceFolders, params.rootUri.value().path)) continue;
+
+            folder->frontend.source.workspaceFolders.emplace_back(params.rootUri.value().path);
+        }
     }
 
     isInitialized = true;
@@ -507,8 +529,14 @@ void LanguageServer::onInitialized([[maybe_unused]] const lsp::InitializedParams
     client->sendTrace("initializing null workspace");
     nullWorkspace->initialize();
     nullWorkspace->setupWithConfiguration(client->globalConfig);
+    
+    std::cerr << "Add workspace folders" << "\n";
     for (auto& folder : workspaceFolders)
     {
+        // for (auto& existingFolder : workspaceFolders)
+        // {
+        //     existingFolder->frontend.source.workspaceFolders.emplace_back(folder->rootUri.path);
+        // }
         client->sendTrace("initializing workspace: " + folder->rootUri.toString());
         folder->initialize();
         // Client does not support retrieving configuration information, so we just setup the workspaces with the default, global, configuration
@@ -753,6 +781,7 @@ void LanguageServer::onDidChangeWatchedFiles(const lsp::DidChangeWatchedFilesPar
                 std::vector<Luau::ModuleName> markedDirty{};
                 workspace->frontend.markDirty(moduleName, &markedDirty);
 
+                // std::cerr << "created file" << "\n";
                 if (change.type == lsp::FileChangeType::Created)
                     workspace->frontend.parse(moduleName);
 
