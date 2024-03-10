@@ -313,7 +313,9 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveStringRequire(cons
 }
 
 void WorkspaceFileResolver::wipeCache() {
-    // cache.clear();
+    if (currentRequireData) {
+        currentRequireData->cache.clear();
+    }
 }
 
 bool WorkspaceFileResolver::matchQueryToPieces(std::vector<std::string_view> query, size_t queryNum, std::vector<std::string_view> pieces, size_t piecesNum) {
