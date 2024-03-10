@@ -314,6 +314,5 @@ lsp::InlayHintResult WorkspaceFolder::inlayHint(const lsp::InlayHintParams& para
 lsp::InlayHintResult LanguageServer::inlayHint(const lsp::InlayHintParams& params)
 {
     auto workspace = findWorkspace(params.textDocument.uri);
-    // std::cerr << "language server check inlay hint: " << params.textDocument.uri.path.c_str() << "\n";
     return workspace->inlayHint(params);
 }

@@ -530,13 +530,8 @@ void LanguageServer::onInitialized([[maybe_unused]] const lsp::InitializedParams
     nullWorkspace->initialize();
     nullWorkspace->setupWithConfiguration(client->globalConfig);
     
-    // std::cerr << "Add workspace folders" << "\n";
     for (auto& folder : workspaceFolders)
     {
-        // for (auto& existingFolder : workspaceFolders)
-        // {
-        //     existingFolder->frontend.source.workspaceFolders.emplace_back(folder->rootUri.path);
-        // }
         client->sendTrace("initializing workspace: " + folder->rootUri.toString());
         folder->initialize();
         // Client does not support retrieving configuration information, so we just setup the workspaces with the default, global, configuration
@@ -781,7 +776,6 @@ void LanguageServer::onDidChangeWatchedFiles(const lsp::DidChangeWatchedFilesPar
                 std::vector<Luau::ModuleName> markedDirty{};
                 workspace->frontend.markDirty(moduleName, &markedDirty);
 
-                // std::cerr << "created file" << "\n";
                 if (change.type == lsp::FileChangeType::Created)
                     workspace->frontend.parse(moduleName);
 
