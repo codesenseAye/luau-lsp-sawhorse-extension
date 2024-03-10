@@ -380,6 +380,15 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(co
 }
 
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const std::string str) {
+    if (currentRequireData) {
+        std::unordered_map<Luau::ModuleName, RequireCache>::const_iterator result = currentRequireData->cache.find(str);
+
+        if (result != currentRequireData->cache.end()) {
+            auto newBody = result->second;
+            return Luau::ModuleInfo{newBody.name};
+        }
+    }
+
     std::vector<std::string_view> query = Luau::split(str, '/');
     size_t queryNum = 0;
 
@@ -437,15 +446,6 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau:
                     body = body.substr(0, end);
                 }
 
-                if (currentRequireData) {
-                    std::unordered_map<Luau::ModuleName, RequireCache>::const_iterator result = currentRequireData->cache.find(body);
-
-                    if (result != currentRequireData->cache.end()) {
-                        auto newBody = result->second;
-                        return Luau::ModuleInfo{newBody.name};
-                    }
-                }
-
                 std::optional<Luau::ModuleInfo> info = getMatchFromString(body);
 
                 if (info) {
@@ -458,6 +458,13 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau:
     if (auto* expr = node->as<Luau::AstExprConstantString>())
     {
         std::string requiredString(expr->value.data, expr->value.size);
+
+        std::optional<Luau::ModuleInfo> info = getMatchFromString(requiredString);
+
+        if (info) {
+            return info;
+        }
+
         return resolveStringRequire(context, requiredString);
     }
     else if (auto* g = node->as<Luau::AstExprGlobal>())
