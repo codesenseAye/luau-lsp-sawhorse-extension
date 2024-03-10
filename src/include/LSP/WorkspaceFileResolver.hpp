@@ -74,9 +74,14 @@ public:
 std::optional<std::filesystem::path> resolveDirectoryAlias(
     const std::filesystem::path& rootPath, const std::unordered_map<std::string, std::string>& directoryAliases, const std::string& str);
 
+struct RequireCache {
+    Luau::ModuleName name;
+    bool incomplete = false;
+};
+
 struct RequireData {
     Luau::SourceModule *currentSourceModule = nullptr;
-    mutable std::unordered_map<Luau::ModuleName, std::string> cache{};
+    mutable std::unordered_map<std::string, RequireCache> cache{};
 };
 
 struct WorkspaceFileResolver

@@ -9,7 +9,6 @@
 #include "LSP/Utils.hpp"
 #include "Luau/range.hpp"
 #include "Luau/StringUtils.h"
-
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
@@ -368,7 +367,7 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(co
         }
 
         if (matches) {
-            currentRequireData->cache[std::string(fullQuery)] = std::string(name);
+            currentRequireData->cache[std::string(fullQuery)] = {std::string(name), false};
             return Luau::ModuleInfo{name};
         }
     }
@@ -401,7 +400,7 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const 
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule*sourceModule)
 {
     // Handle require("path") for compatibility
-    if (sourceModule == nullptr && currentRequireData) {
+    if (currentRequireData && sourceModule == nullptr) {
         sourceModule = currentRequireData->currentSourceModule;
     }
 
@@ -410,12 +409,22 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau:
         if (comment) {
             std::string content(comment.value().content);
             std::string find = "@module ";
+            std::string findBlock = "module "; // for block comments
             size_t location = content.find_first_of(find);
+            std::string body;
 
             if (location == 0) {
-                std::string body = content.substr(find.size());
-                std::string rootBody = rootUri.path.substr(1) + "/" + body;
+                body = content.substr(find.size());
+            } else {
+                location = content.find_first_of(findBlock);
 
+                if (location == 0) {
+                    body = content.substr(findBlock.size());
+                }
+            }
+
+            if (location == 0) {
+                std::string rootBody = rootUri.path.substr(1) + "/" + body;
                 std::filesystem::path rootBodyPath(rootBody);
 
                 if (std::filesystem::exists(rootBodyPath) && !std::filesystem::is_directory(rootBodyPath)) {
@@ -429,11 +438,11 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau:
                 }
 
                 if (currentRequireData) {
-                    std::unordered_map<Luau::ModuleName, std::string>::const_iterator result = currentRequireData->cache.find(body);
+                    std::unordered_map<Luau::ModuleName, RequireCache>::const_iterator result = currentRequireData->cache.find(body);
 
                     if (result != currentRequireData->cache.end()) {
                         auto newBody = result->second;
-                        return Luau::ModuleInfo{newBody};
+                        return Luau::ModuleInfo{newBody.name};
                     }
                 }
 

@@ -147,6 +147,7 @@ void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAu
         fileResolver.wipeCache();
     }
 
+    fileResolver.sourceModules = frontend.sourceModules;
     fileResolver.currentRequireData->currentSourceModule = frontend.getSourceModule(moduleName);
 
     // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
@@ -154,11 +155,13 @@ void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAu
     // retain the type graph if the module is not marked dirty.
     // We do a manual check and dirty marking to fix this
     auto module = forAutocomplete ? frontend.moduleResolverForAutocomplete.getModule(moduleName) : frontend.moduleResolver.getModule(moduleName);
-    if (module && module->internalTypes.types.empty()) // If we didn't retain type graphs, then the internalTypes arena is empty
+    if (module && module->internalTypes.types.empty() || markFrontendDirty) {
+        // If we didn't retain type graphs, then the internalTypes arena is empty
+        markFrontendDirty = false;
         frontend.markDirty(moduleName);
+    }
 
     frontend.check(moduleName, Luau::FrontendOptions{/* retainFullTypeGraphs: */ true, forAutocomplete, /* runLintChecks: */ false});
-    fileResolver.sourceModules = frontend.sourceModules;
 }
 
 void WorkspaceFolder::indexFiles(const ClientConfiguration& config)
@@ -198,7 +201,7 @@ void WorkspaceFolder::indexFiles(const ClientConfiguration& config)
                     // We do not perform any type checking here
                     frontend.parse(moduleName);
 
-                    indexCount += 1;
+                    markFrontendDirty = true;
                 }
             }
         }
