@@ -53,8 +53,6 @@ declare utf8: {
     offset: (string, number, number?) -> number?,
 }
 
-declare function shared(target: any): any
-
 declare function collectgarbage(mode: "count"): number
 declare function warn<T...>(...: T...)
 declare function tick(): number
