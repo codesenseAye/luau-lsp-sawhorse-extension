@@ -530,7 +530,7 @@ void LanguageServer::onInitialized([[maybe_unused]] const lsp::InitializedParams
     nullWorkspace->initialize();
     nullWorkspace->setupWithConfiguration(client->globalConfig);
     
-    std::cerr << "Add workspace folders" << "\n";
+    // std::cerr << "Add workspace folders" << "\n";
     for (auto& folder : workspaceFolders)
     {
         // for (auto& existingFolder : workspaceFolders)

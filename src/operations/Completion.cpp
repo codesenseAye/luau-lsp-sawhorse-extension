@@ -669,7 +669,7 @@ std::vector<lsp::CompletionItem> WorkspaceFolder::completion(const lsp::Completi
 
     auto moduleName = fileResolver.getModuleName(params.textDocument.uri);
     auto textDocument = fileResolver.getTextDocument(params.textDocument.uri);
-    std::cerr << "params uri completion: " << params.textDocument.uri.path.c_str() << "\n";
+    // std::cerr << "params uri completion: " << params.textDocument.uri.path.c_str() << "\n";
     
     if (!textDocument)
         throw JsonRpcException(lsp::ErrorCode::RequestFailed, "No managed text document for " + params.textDocument.uri.toString());

@@ -117,7 +117,7 @@ bool WorkspaceFolder::isDefinitionFile(const std::filesystem::path& path, const 
 // !NOTE: use `frontend.parse` if you do not care about typechecking
 Luau::CheckResult WorkspaceFolder::checkSimple(const Luau::ModuleName& moduleName, bool runLintChecks)
 {
-    std::cerr << "check simple: " <<  moduleName.c_str() << "\n";
+    // std::cerr << "check simple: " <<  moduleName.c_str() << "\n";
     // TODO: We do not need to store the type graphs. But it leads to a bad bug if we disable it so for now, we keep the type graphs
     // https://github.com/Roblox/luau/issues/975
     if (!FFlag::LuauStacklessTypeClone3)
@@ -144,14 +144,14 @@ Luau::CheckResult WorkspaceFolder::checkSimple(const Luau::ModuleName& moduleNam
 // can often be hit
 void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAutocomplete)
 {
-    std::cerr << "check strict: " <<  moduleName.c_str() << "\n";
+    // std::cerr << "check strict: " <<  moduleName.c_str() << "\n";
 
-    if (fileResolver.currentSourceModule && strcmp(fileResolver.currentSourceModule->name.c_str(), moduleName.c_str()) != 0) {
-        std::cerr << "wipe: " <<  moduleName.c_str() << "\n";
+    if (fileResolver.currentRequireData->currentSourceModule && strcmp(fileResolver.currentRequireData->currentSourceModule->name.c_str(), moduleName.c_str()) != 0) {
+        // std::cerr << "wipe: " <<  moduleName.c_str() << "\n";
         fileResolver.wipeCache();
     }
 
-    fileResolver.currentSourceModule = frontend.getSourceModule(moduleName);
+    fileResolver.currentRequireData->currentSourceModule = frontend.getSourceModule(moduleName);
 
     // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
     // and then a call `Frontend::check(moduleName, { retainTypeGraphs: true })` will NOT actually

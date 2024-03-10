@@ -1,3 +1,5 @@
+#define _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
+
 #include <filesystem>
 #include <optional>
 #include <unordered_map>
@@ -5,12 +7,16 @@
 #include "Luau/Ast.h"
 #include "LSP/WorkspaceFileResolver.hpp"
 #include "LSP/Utils.hpp"
+#include "Luau/range.hpp"
+#include "Luau/StringUtils.h"
 
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
 #include <iostream>
 #endif
+
+using namespace util::lang;
 
 Luau::ModuleName WorkspaceFileResolver::getModuleName(const Uri& name) const
 {
@@ -306,22 +312,95 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveStringRequire(cons
     return {{Uri::parse(Uri::file(filePath).toString()).fsPath().generic_string()}};
 }
 
-// std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule *sourceModule)
-// {
-//     // Handle require("path") for compatibility
-//     std::cerr << "TEST RESOLVE MODULE 2" << "\n";
-
-// }
-
 void WorkspaceFileResolver::wipeCache() {
+    // cache.clear();
+}
 
+bool WorkspaceFileResolver::matchQueryToPieces(std::vector<std::string_view> query, size_t queryNum, std::vector<std::string_view> pieces, size_t piecesNum) {
+    bool matches = true;
+
+    for(size_t i : indices(query)) {
+        size_t qi = (queryNum - 1) - i;
+        size_t pi = (piecesNum - 1) - i;
+        
+        if (i >= piecesNum) {
+            continue;
+        }
+
+        std::string queryStr = {query[qi].begin(), query[qi].end()};
+        std::string pieceStr = std::string(pieces[pi].begin(), pieces[pi].end());
+
+        if (strcmp(queryStr.c_str(), pieceStr.c_str()) != 0) {
+            matches = false;
+        }
+    }
+
+    return matches;
+}
+
+
+std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(const Luau::ModuleName &name, std::string fullQuery, std::vector<std::string_view> query, size_t queryNum) {
+    try
+    {
+        auto shortenName = name.substr(name.find_first_of(rootUri.path) + rootUri.path.length());
+        shortenName = shortenName.substr(0, shortenName.find_last_of("."));
+
+        std::vector<std::string_view> pieces = Luau::split(shortenName, '/');
+        
+        size_t piecesNum = 0;
+
+        for(size_t i : indices(pieces)) {
+            piecesNum += 1;
+        }
+
+        bool matches = matchQueryToPieces(query, queryNum, pieces, piecesNum);
+
+        // try attaching /init only if the modulename has init in it
+        if (!matches && pieces.back() == "init") {
+            size_t queryNumCopy = queryNum + 1;
+
+            std::vector<std::string_view> queryCopy(query);
+            queryCopy.emplace_back("init");
+
+            matches = matchQueryToPieces(queryCopy, queryNumCopy, pieces, piecesNum);
+        }
+
+        if (matches) {
+            currentRequireData->cache[std::string(fullQuery)] = std::string(name);
+            return Luau::ModuleInfo{name};
+        }
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << "ERROR! 1 message: " << e.what() << '\n';
+    }
+
+    return std::nullopt;
+}
+
+std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const std::string str) {
+    std::vector<std::string_view> query = Luau::split(str, '/');
+    size_t queryNum = 0;
+
+    for(size_t i : indices(query)) {
+        queryNum += 1;
+    }
+
+    // all known modules
+    for (auto [name, module] : sourceModules) {
+        if (auto moduleInfo = getSpecificModuleMatch(name, str, query, queryNum)) {
+            return moduleInfo;
+        }
+    }
+
+    return std::nullopt;
 }
 
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule*sourceModule)
 {
     // Handle require("path") for compatibility
-    if (sourceModule == nullptr) {
-        sourceModule = currentSourceModule;
+    if (sourceModule == nullptr && currentRequireData) {
+        sourceModule = currentRequireData->currentSourceModule;
     }
 
     if (sourceModule != nullptr) {
@@ -333,17 +412,34 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau:
 
             if (location == 0) {
                 std::string body = content.substr(find.size());
-                size_t end = body.find_last_of(".");
-                body = rootUri.path.substr(1) + "/" + body;
+                std::string rootBody = rootUri.path.substr(1) + "/" + body;
 
-                std::cerr << "resolve module info body: " << body << "\n";
-                
-                std::filesystem::path bodyPath(body);
+                std::filesystem::path rootBodyPath(rootBody);
 
-                if (std::filesystem::exists(bodyPath) && !std::filesystem::is_directory(bodyPath)) {
-                    return Luau::ModuleInfo{body};
+                if (std::filesystem::exists(rootBodyPath) && !std::filesystem::is_directory(rootBodyPath)) {
+                    return Luau::ModuleInfo{rootBody};
                 }
 
+                size_t end = body.find_last_of(".");
+
+                if (end != std::string::npos) {
+                    body = body.substr(0, end);
+                }
+
+                if (currentRequireData) {
+                    std::unordered_map<Luau::ModuleName, std::string>::const_iterator result = currentRequireData->cache.find(body);
+
+                    if (result != currentRequireData->cache.end()) {
+                        auto newBody = result->second;
+                        return Luau::ModuleInfo{newBody};
+                    }
+                }
+
+                std::optional<Luau::ModuleInfo> info = getMatchFromString(body);
+
+                if (info) {
+                    return info;
+                }
             }
         }
     }
