@@ -11,6 +11,8 @@
 #include "LSP/Sourcemap.hpp"
 #include "LSP/TextDocument.hpp"
 
+struct SourceModule;
+
 
 // A wrapper around a text document pointer
 // A text document might be temporarily created for the purposes of this function
@@ -85,6 +87,8 @@ public:
     Uri rootUri;
     // The root source node from a parsed Rojo source map
     SourceNodePtr rootSourceNode;
+    Luau::SourceModule*currentSourceModule = nullptr;
+    std::unordered_map<Luau::ModuleName, std::shared_ptr<Luau::SourceModule>> sourceModules;
 
     mutable std::unordered_map<Luau::ModuleName, SourceNodePtr> virtualPathsToSourceNodes{};
 
@@ -125,6 +129,7 @@ public:
     // Return the corresponding module name from a file Uri
     // We first try and find a virtual file path which matches it, and return that. Otherwise, we use the file system path
     Luau::ModuleName getModuleName(const Uri& name) const;
+    void wipeCache();
 
     std::optional<SourceNodePtr> getSourceNodeFromVirtualPath(const Luau::ModuleName& name) const;
 
@@ -135,7 +140,7 @@ public:
     std::optional<std::filesystem::path> resolveToRealPath(const Luau::ModuleName& name) const;
 
     std::optional<Luau::SourceCode> readSource(const Luau::ModuleName& name) override;
-    std::optional<Luau::ModuleInfo> resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node) override;
+    std::optional<Luau::ModuleInfo> resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule *sourceModule = nullptr) override;
     std::string getHumanReadableModuleName(const Luau::ModuleName& name) const override;
     const Luau::Config& getConfig(const Luau::ModuleName& name) const override;
     void clearConfigCache();

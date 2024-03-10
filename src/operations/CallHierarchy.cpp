@@ -118,7 +118,6 @@ std::vector<lsp::CallHierarchyItem> WorkspaceFolder::prepareCallHierarchy(const 
         throw JsonRpcException(lsp::ErrorCode::RequestFailed, "No managed text document for " + params.textDocument.uri.toString());
     auto position = textDocument->convertPosition(params.position);
 
-    std::cerr << "check strict for call hierarchy" << "\n";
     // Run the type checker to ensure we are up to date
     checkStrict(moduleName);
 

@@ -396,7 +396,6 @@ std::vector<size_t> packTokens(const TextDocument* textDocument, std::vector<Sem
 
 std::optional<lsp::SemanticTokens> WorkspaceFolder::semanticTokens(const lsp::SemanticTokensParams& params)
 {
-    std::cerr << "params u ri: " << params.textDocument.uri.path.c_str() << "\n";
     auto moduleName = fileResolver.getModuleName(params.textDocument.uri);
     auto textDocument = fileResolver.getTextDocument(params.textDocument.uri);
     if (!textDocument)
@@ -404,7 +403,6 @@ std::optional<lsp::SemanticTokens> WorkspaceFolder::semanticTokens(const lsp::Se
 
     // Run the type checker to ensure we are up to date
     // TODO: this relies on the autocomplete typechecker, which we don't really need for semantic tokens
-    std::cerr << "check strict for semantic tokens: " << moduleName.c_str() << "\n";
     checkStrict(moduleName);
 
     auto sourceModule = frontend.getSourceModule(moduleName);

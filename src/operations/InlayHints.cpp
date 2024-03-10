@@ -298,7 +298,6 @@ lsp::InlayHintResult WorkspaceFolder::inlayHint(const lsp::InlayHintParams& para
     std::vector<lsp::DocumentLink> result{};
 
     // TODO: expressiveTypes - remove "forAutocomplete" once the types have been fixed
-    std::cerr << "check strict for inlay hint: " << params.textDocument.uri.path.c_str() << "\n";
     checkStrict(moduleName, /* forAutocomplete: */ config.hover.strictDatamodelTypes);
 
     auto sourceModule = frontend.getSourceModule(moduleName);

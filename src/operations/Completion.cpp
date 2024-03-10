@@ -676,7 +676,6 @@ std::vector<lsp::CompletionItem> WorkspaceFolder::completion(const lsp::Completi
 
     bool isGetService = false;
 
-    std::cerr << "check strict for completion" << "\n";
     // We must perform check before autocompletion
     checkStrict(moduleName, /* forAutocomplete: */ true);
 

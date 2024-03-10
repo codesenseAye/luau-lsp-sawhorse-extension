@@ -6,6 +6,12 @@
 #include "LSP/WorkspaceFileResolver.hpp"
 #include "LSP/Utils.hpp"
 
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#include <iostream>
+#endif
+
 Luau::ModuleName WorkspaceFileResolver::getModuleName(const Uri& name) const
 {
     // Handle non-file schemes
@@ -300,9 +306,48 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveStringRequire(cons
     return {{Uri::parse(Uri::file(filePath).toString()).fsPath().generic_string()}};
 }
 
-std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node)
+// std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule *sourceModule)
+// {
+//     // Handle require("path") for compatibility
+//     std::cerr << "TEST RESOLVE MODULE 2" << "\n";
+
+// }
+
+void WorkspaceFileResolver::wipeCache() {
+
+}
+
+std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule*sourceModule)
 {
     // Handle require("path") for compatibility
+    if (sourceModule == nullptr) {
+        sourceModule = currentSourceModule;
+    }
+
+    if (sourceModule != nullptr) {
+        std::optional<Luau::HotComment> comment = getHotComment(*sourceModule, node->location.begin);
+        if (comment) {
+            std::string content(comment.value().content);
+            std::string find = "@module ";
+            size_t location = content.find_first_of(find);
+
+            if (location == 0) {
+                std::string body = content.substr(find.size());
+                size_t end = body.find_last_of(".");
+                body = rootUri.path.substr(1) + "/" + body;
+
+                std::cerr << "resolve module info body: " << body << "\n";
+                
+                std::filesystem::path bodyPath(body);
+
+                if (std::filesystem::exists(bodyPath) && !std::filesystem::is_directory(bodyPath)) {
+                    return Luau::ModuleInfo{body};
+                }
+
+            }
+        }
+    }
+    
     if (auto* expr = node->as<Luau::AstExprConstantString>())
     {
         std::string requiredString(expr->value.data, expr->value.size);

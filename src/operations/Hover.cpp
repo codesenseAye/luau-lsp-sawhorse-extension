@@ -81,7 +81,6 @@ std::optional<lsp::Hover> WorkspaceFolder::hover(const lsp::HoverParams& params)
 
     // Run the type checker to ensure we are up to date
     // TODO: expressiveTypes - remove "forAutocomplete" once the types have been fixed
-    std::cerr << "check strict for hover" << "\n";
     checkStrict(moduleName, /* forAutocomplete: */ config.hover.strictDatamodelTypes);
 
     auto sourceModule = frontend.getSourceModule(moduleName);
