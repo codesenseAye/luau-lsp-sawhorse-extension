@@ -401,7 +401,7 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const 
     // all known modules
     for (std::string name : currentRequireData->sourceModules) {
         if (auto moduleInfo = getSpecificModuleMatch(name, str, query, queryNum)) {
-            return moduleInfo; // comment this part out next and just return a different string instead to see if its the func
+            return moduleInfo;
         }
     }
 

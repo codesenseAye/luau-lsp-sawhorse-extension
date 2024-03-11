@@ -147,12 +147,22 @@ void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAu
     try {
         if (fileResolver.currentRequireData && strcmp(fileResolver.currentRequireData->currentSourceModuleName.c_str(), moduleName.c_str()) != 0) {
             fileResolver.wipeCache();
-
-            // TODO !! this might be causing the crashing !!!
-            // markFrontendDirty = true; // this makes sure that we dont get stuck where we have incomplete requires (important) and we need to reopen the file to fix it
+            markFrontendDirty = true; // this makes sure that we dont get stuck where we have incomplete requires (important) and we need to reopen the file to fix it
         }
 
-        // FIX THIS CAUSING AN ERROR AND ALSO THE gotodefiniton link on shareds not working at first but then working on reopen
+        // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
+        // and then a call `Frontend::check(moduleName, { retainTypeGraphs: true })` will NOT actually
+        // retain the type graph if the module is not marked dirty.
+        // We do a manual check and dirty marking to fix this
+        auto module = forAutocomplete ? frontend.moduleResolverForAutocomplete.getModule(moduleName) : frontend.moduleResolver.getModule(moduleName);
+        if (module && module->internalTypes.types.empty() || markFrontendDirty) {
+            // If we didn't retain type graphs, then the internalTypes arena is empty
+            markFrontendDirty = false;
+            frontend.markDirty(moduleName);
+        }
+
+        frontend.check(moduleName, Luau::FrontendOptions{/* retainFullTypeGraphs: */ true, forAutocomplete, /* runLintChecks: */ false});
+
         fileResolver.currentRequireData->sourceModules.clear();
         
         for (auto [name, _] : frontend.sourceNodes) {
@@ -172,19 +182,6 @@ void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAu
 
             fileResolver.currentRequireData->currentSourceComments.emplace_back(comment);
         }
-
-        // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
-        // and then a call `Frontend::check(moduleName, { retainTypeGraphs: true })` will NOT actually
-        // retain the type graph if the module is not marked dirty.
-        // We do a manual check and dirty marking to fix this
-        auto module = forAutocomplete ? frontend.moduleResolverForAutocomplete.getModule(moduleName) : frontend.moduleResolver.getModule(moduleName);
-        if (module && module->internalTypes.types.empty() || markFrontendDirty) {
-            // If we didn't retain type graphs, then the internalTypes arena is empty
-            markFrontendDirty = false;
-            frontend.markDirty(moduleName);
-        }
-
-        frontend.check(moduleName, Luau::FrontendOptions{/* retainFullTypeGraphs: */ true, forAutocomplete, /* runLintChecks: */ false});
     } catch(std::exception err) {
         std::cerr << "Error copying source module names: " << err.what() << "\n";
     }
