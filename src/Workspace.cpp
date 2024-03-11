@@ -6,6 +6,7 @@
 #include "Luau/BuiltinDefinitions.h"
 
 #ifdef _WIN32
+#include <Windows.h>
 #include <io.h>
 #include <fcntl.h>
 #include <iostream>
@@ -143,25 +144,50 @@ Luau::CheckResult WorkspaceFolder::checkSimple(const Luau::ModuleName& moduleNam
 // can often be hit
 void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAutocomplete)
 {
-    if (fileResolver.currentRequireData->currentSourceModule && strcmp(fileResolver.currentRequireData->currentSourceModule->name.c_str(), moduleName.c_str()) != 0) {
-        fileResolver.wipeCache();
+    try {
+        if (fileResolver.currentRequireData && strcmp(fileResolver.currentRequireData->currentSourceModuleName.c_str(), moduleName.c_str()) != 0) {
+            fileResolver.wipeCache();
+
+            // TODO !! this might be causing the crashing !!!
+            // markFrontendDirty = true; // this makes sure that we dont get stuck where we have incomplete requires (important) and we need to reopen the file to fix it
+        }
+
+        // FIX THIS CAUSING AN ERROR AND ALSO THE gotodefiniton link on shareds not working at first but then working on reopen
+        fileResolver.currentRequireData->sourceModules.clear();
+        
+        for (auto [name, _] : frontend.sourceNodes) {
+            std::string newName(name.data(), name.size());
+            fileResolver.currentRequireData->sourceModules.emplace_back(newName);
+        }
+
+        fileResolver.currentRequireData->currentSourceModuleName = std::string(moduleName);
+        fileResolver.currentRequireData->currentSourceComments.clear();
+
+        for (auto hotcomment : frontend.getSourceModule(moduleName)->hotcomments) {
+            Luau::HotComment comment;
+            comment.content = std::string(hotcomment.content);
+            comment.at = hotcomment.at;
+            comment.header = hotcomment.header;
+            comment.location = Luau::Location(hotcomment.location.begin, hotcomment.location.end);
+
+            fileResolver.currentRequireData->currentSourceComments.emplace_back(comment);
+        }
+
+        // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
+        // and then a call `Frontend::check(moduleName, { retainTypeGraphs: true })` will NOT actually
+        // retain the type graph if the module is not marked dirty.
+        // We do a manual check and dirty marking to fix this
+        auto module = forAutocomplete ? frontend.moduleResolverForAutocomplete.getModule(moduleName) : frontend.moduleResolver.getModule(moduleName);
+        if (module && module->internalTypes.types.empty() || markFrontendDirty) {
+            // If we didn't retain type graphs, then the internalTypes arena is empty
+            markFrontendDirty = false;
+            frontend.markDirty(moduleName);
+        }
+
+        frontend.check(moduleName, Luau::FrontendOptions{/* retainFullTypeGraphs: */ true, forAutocomplete, /* runLintChecks: */ false});
+    } catch(std::exception err) {
+        std::cerr << "Error copying source module names: " << err.what() << "\n";
     }
-
-    fileResolver.sourceModules = frontend.sourceModules;
-    fileResolver.currentRequireData->currentSourceModule = frontend.getSourceModule(moduleName);
-
-    // HACK: note that a previous call to `Frontend::check(moduleName, { retainTypeGraphs: false })`
-    // and then a call `Frontend::check(moduleName, { retainTypeGraphs: true })` will NOT actually
-    // retain the type graph if the module is not marked dirty.
-    // We do a manual check and dirty marking to fix this
-    auto module = forAutocomplete ? frontend.moduleResolverForAutocomplete.getModule(moduleName) : frontend.moduleResolver.getModule(moduleName);
-    if (module && module->internalTypes.types.empty() || markFrontendDirty) {
-        // If we didn't retain type graphs, then the internalTypes arena is empty
-        markFrontendDirty = false;
-        frontend.markDirty(moduleName);
-    }
-
-    frontend.check(moduleName, Luau::FrontendOptions{/* retainFullTypeGraphs: */ true, forAutocomplete, /* runLintChecks: */ false});
 }
 
 void WorkspaceFolder::indexFiles(const ClientConfiguration& config)
@@ -253,6 +279,8 @@ void WorkspaceFolder::initialize()
 
     Luau::attachTag(Luau::getGlobalBinding(frontend.globalsForAutocomplete, "require"), "Require");
     Luau::attachTag(Luau::getGlobalBinding(frontend.globalsForAutocomplete, "shared"), "Shared");
+
+    // GetCurrentProcessId() gdb
 
     if (client->definitionsFiles.empty())
         client->sendLogMessage(lsp::MessageType::Warning, "No definitions file provided by client");

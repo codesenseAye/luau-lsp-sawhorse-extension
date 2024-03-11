@@ -76,11 +76,12 @@ std::optional<std::filesystem::path> resolveDirectoryAlias(
 
 struct RequireCache {
     Luau::ModuleName name;
-    bool incomplete = false;
 };
 
 struct RequireData {
-    Luau::SourceModule *currentSourceModule = nullptr;
+    std::vector<Luau::HotComment> currentSourceComments;
+    std::string currentSourceModuleName;
+    std::vector<std::string> sourceModules{};
     mutable std::unordered_map<std::string, RequireCache> cache{};
 };
 
@@ -100,7 +101,6 @@ public:
     SourceNodePtr rootSourceNode;
 
     RequireData*currentRequireData;
-    std::unordered_map<Luau::ModuleName, std::shared_ptr<Luau::SourceModule>> sourceModules;
 
     mutable std::unordered_map<Luau::ModuleName, SourceNodePtr> virtualPathsToSourceNodes{};
 
@@ -153,7 +153,7 @@ public:
     std::optional<std::filesystem::path> resolveToRealPath(const Luau::ModuleName& name) const;
 
     std::optional<Luau::ModuleInfo> getMatchFromString(const std::string str);
-    std::optional<Luau::ModuleInfo> getSpecificModuleMatch(const Luau::ModuleName &name, std::string fullQuery, std::vector<std::string_view> query, size_t queryNum);
+    std::optional<Luau::ModuleInfo> getSpecificModuleMatch(const Luau::ModuleName name, std::string fullQuery, std::vector<std::string_view> query, size_t queryNum);
     bool matchQueryToPieces(std::vector<std::string_view> query, size_t queryNum, std::vector<std::string_view> piece, size_t piecesNum);
 
     std::optional<Luau::SourceCode> readSource(const Luau::ModuleName& name) override;

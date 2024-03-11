@@ -340,7 +340,7 @@ bool WorkspaceFileResolver::matchQueryToPieces(std::vector<std::string_view> que
 }
 
 
-std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(const Luau::ModuleName &name, std::string fullQuery, std::vector<std::string_view> query, size_t queryNum) {
+std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(const Luau::ModuleName name, std::string fullQuery, std::vector<std::string_view> query, size_t queryNum) {
     try
     {
         auto shortenName = name.substr(name.find_first_of(rootUri.path) + rootUri.path.length());
@@ -367,8 +367,8 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(co
         }
 
         if (matches) {
-            currentRequireData->cache[std::string(fullQuery)] = {std::string(name), false};
-            return Luau::ModuleInfo{name};
+            currentRequireData->cache[std::string(fullQuery)] = {std::string(name)};
+            return Luau::ModuleInfo{std::string(name.data(), name.size())};
         }
     }
     catch(const std::exception& e)
@@ -382,10 +382,12 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(co
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const std::string str) {
     if (currentRequireData) {
         std::unordered_map<Luau::ModuleName, RequireCache>::const_iterator result = currentRequireData->cache.find(str);
-
         if (result != currentRequireData->cache.end()) {
             auto newBody = result->second;
-            return Luau::ModuleInfo{newBody.name};
+
+            if (std::filesystem::exists(newBody.name)) {
+                return Luau::ModuleInfo{newBody.name};
+            }
         }
     }
 
@@ -397,9 +399,9 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const 
     }
 
     // all known modules
-    for (auto [name, module] : sourceModules) {
+    for (std::string name : currentRequireData->sourceModules) {
         if (auto moduleInfo = getSpecificModuleMatch(name, str, query, queryNum)) {
-            return moduleInfo;
+            return moduleInfo; // comment this part out next and just return a different string instead to see if its the func
         }
     }
 
@@ -409,49 +411,51 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const 
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule*sourceModule)
 {
     // Handle require("path") for compatibility
-    if (currentRequireData && sourceModule == nullptr) {
-        sourceModule = currentRequireData->currentSourceModule;
-    }
 
-    if (sourceModule != nullptr) {
-        std::optional<Luau::HotComment> comment = getHotComment(*sourceModule, node->location.begin);
-        if (comment) {
-            std::string content(comment.value().content);
-            std::string find = "@module ";
-            std::string findBlock = "module "; // for block comments
-            size_t location = content.find_first_of(find);
-            std::string body;
+    if (currentRequireData) {
+        try {
+            std::optional<Luau::HotComment> comment = getHotComment(currentRequireData->currentSourceComments, node->location.begin);
 
-            if (location == 0) {
-                body = content.substr(find.size());
-            } else {
-                location = content.find_first_of(findBlock);
+            if (comment) {
+                std::string content(comment.value().content);
+                std::string find = "@module ";
+                std::string findBlock = "module "; // for block comments
+                size_t location = content.find_first_of(find);
+                std::string body;
 
                 if (location == 0) {
-                    body = content.substr(findBlock.size());
+                    body = content.substr(find.size());
+                } else {
+                    location = content.find_first_of(findBlock);
+
+                    if (location == 0) {
+                        body = content.substr(findBlock.size());
+                    }
+                }
+
+                if (location == 0) {
+                    std::string rootBody = rootUri.path.substr(1) + "/" + body;
+                    std::filesystem::path rootBodyPath(rootBody);
+
+                    if (std::filesystem::exists(rootBodyPath) && !std::filesystem::is_directory(rootBodyPath)) {
+                        return Luau::ModuleInfo{rootBody};
+                    }
+
+                    size_t end = body.find_last_of(".");
+
+                    if (end != std::string::npos) {
+                        body = body.substr(0, end);
+                    }
+
+                    std::optional<Luau::ModuleInfo> info = getMatchFromString(body);
+
+                    if (info) {
+                        return info;
+                    }
                 }
             }
-
-            if (location == 0) {
-                std::string rootBody = rootUri.path.substr(1) + "/" + body;
-                std::filesystem::path rootBodyPath(rootBody);
-
-                if (std::filesystem::exists(rootBodyPath) && !std::filesystem::is_directory(rootBodyPath)) {
-                    return Luau::ModuleInfo{rootBody};
-                }
-
-                size_t end = body.find_last_of(".");
-
-                if (end != std::string::npos) {
-                    body = body.substr(0, end);
-                }
-
-                std::optional<Luau::ModuleInfo> info = getMatchFromString(body);
-
-                if (info) {
-                    return info;
-                }
-            }
+        } catch (std::exception err) {
+            std::cerr << "Comment error: " << err.what() << "\n";
         }
     }
     
@@ -459,10 +463,15 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau:
     {
         std::string requiredString(expr->value.data, expr->value.size);
 
-        std::optional<Luau::ModuleInfo> info = getMatchFromString(requiredString);
+        try {
 
-        if (info) {
-            return info;
+            std::optional<Luau::ModuleInfo> info = getMatchFromString(requiredString);
+
+            if (info) {
+                return info;
+            }
+        } catch(std::exception err) {
+            std::cerr << "String require match error: " << err.what() << "\n";
         }
 
         return resolveStringRequire(context, requiredString);
