@@ -16,7 +16,7 @@ jobs:
 
       - name: Pull latest syntax file
         run: |
-          curl https://raw.githubusercontent.com/JohnnyMorganz/Luau.tmLanguage/main/Luau.tmLanguage.json > editors/code/syntaxes/Luau.tmLanguage.json
+          curl https://raw.githubusercontent.com/CarpenterTooling/Luau.tmLanguage/main/Luau.tmLanguage.json > editors/code/syntaxes/Luau.tmLanguage.json
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4

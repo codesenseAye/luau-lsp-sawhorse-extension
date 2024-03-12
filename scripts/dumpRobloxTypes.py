@@ -65,6 +65,7 @@ IGNORED_INSTANCES: List[str] = [
     "GlobalSettings",  # redefined explicitly
     "SharedTable",  # redefined explicitly as the RobloxLsp type is incomplete
     "RaycastResult",  # Redefined using generics
+    "shared",
 ]
 
 # Methods / Properties ignored in classes. Commonly used to add corrections
@@ -587,8 +588,6 @@ declare utf8: {
     nfdnormalize: (string) -> string,
     offset: (string, number, number?) -> number?,
 }
-
-declare shared: any
 
 declare function collectgarbage(mode: "count"): number
 declare function warn<T...>(...: T...)

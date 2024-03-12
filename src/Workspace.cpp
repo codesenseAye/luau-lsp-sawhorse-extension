@@ -294,6 +294,19 @@ void WorkspaceFolder::initialize()
             continue;
         }
 
+        std::string sharedChars = "declare shared: any";
+        size_t sharedPos = definitionsContents->find(sharedChars.c_str());
+
+        if (sharedPos != std::string::npos) {
+            std::cerr << sharedChars.size() << "\n";
+            std::cerr << sharedPos << "\n";
+            std::cerr << definitionsContents->c_str() << "\n";
+            definitionsContents->erase(sharedPos, sharedChars.size() + 1);
+            client->sendWindowMessage(lsp::MessageType::Error,
+                "Removed incorrect type in definitions file: " + definitionsFile.generic_string() + ".");
+            std::cerr << definitionsContents->c_str() << "\n";
+        }
+
         // Parse definitions file metadata
         client->sendTrace("workspace initialization: parsing definitions file metadata");
         if (auto metadata = types::parseDefinitionsFileMetadata(*definitionsContents))

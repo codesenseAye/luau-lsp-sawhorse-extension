@@ -38,7 +38,7 @@ const SECURITY_LEVELS = [
   "RobloxScriptSecurity",
 ];
 const globalTypesEndpointForSecurityLevel = (securityLevel: string) => {
-  return `https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/main/scripts/globalTypes.${securityLevel}.d.luau`;
+  return `https://raw.githubusercontent.com/CarpenterTooling/luau-lsp/main/scripts/globalTypes.${securityLevel}.d.luau`;
 };
 
 const globalTypesUri = (
