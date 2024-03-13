@@ -74,6 +74,7 @@ lsp::Diagnostic createParseErrorDiagnostic(const Luau::ParseError& error, const 
 
 bool isGetService(const Luau::AstExpr* expr);
 bool isRequire(const Luau::AstExpr* expr);
+bool isShared(const Luau::AstExpr* expr);
 bool isMethod(const Luau::FunctionType* ftv);
 
 struct FindImportsVisitor : public Luau::AstVisitor
@@ -87,6 +88,9 @@ public:
     std::map<std::string, Luau::AstStatLocal*> serviceLineMap{};
     std::optional<size_t> firstRequireLine = std::nullopt;
     std::vector<std::map<std::string, Luau::AstStatLocal*>> requiresMap{{}};
+    std::optional<size_t> firstModuleDefinitionLine = std::nullopt;
+    std::optional<size_t> lastModuleDefinitionLine = std::nullopt;
+    std::map<std::string, Luau::AstStatLocal*> moduleLineMap{};
 
     size_t findBestLineForService(const std::string& serviceName, size_t minimumLineNumber)
     {
@@ -98,6 +102,21 @@ public:
         {
             auto location = stat->location.end.line;
             if (definedService < serviceName && location >= lineNumber)
+                lineNumber = location + 1;
+        }
+        return lineNumber;
+    }
+
+    size_t findBestLineForModule(const std::string& moduleName, size_t minimumLineNumber)
+    {
+        if (firstModuleDefinitionLine)
+            minimumLineNumber = *firstModuleDefinitionLine > minimumLineNumber ? *firstModuleDefinitionLine : minimumLineNumber;
+
+        size_t lineNumber = minimumLineNumber;
+        for (auto& [definedModule, stat] : moduleLineMap)
+        {
+            auto location = stat->location.end.line;
+            if (definedModule < moduleName && location >= lineNumber)
                 lineNumber = location + 1;
         }
         return lineNumber;
@@ -142,6 +161,16 @@ public:
 
             requiresMap.back().emplace(std::string(localName->name.value), local);
             previousRequireLine = line;
+        }
+        else if (isShared(expr))
+        {
+            firstModuleDefinitionLine =
+                !firstModuleDefinitionLine.has_value() || firstModuleDefinitionLine.value() >= line ? line : firstModuleDefinitionLine.value();
+            lastServiceDefinitionLine =
+                !lastModuleDefinitionLine.has_value() || lastModuleDefinitionLine.value() <= line ? line : lastModuleDefinitionLine.value();
+            moduleLineMap.emplace(std::string(localName->name.value), local);
+            // if the arg and local name are different this will sometimes allow for it to give the wrong module
+            // fix: replace localName->name.value with the arg TODO
         }
 
         return false;

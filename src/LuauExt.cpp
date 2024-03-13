@@ -1302,6 +1302,21 @@ bool isRequire(const Luau::AstExpr* expr)
     return false;
 }
 
+bool isShared(const Luau::AstExpr* expr)
+{
+    if (auto call = expr->as<Luau::AstExprCall>())
+    {
+        if (auto funcAsGlobal = call->func->as<Luau::AstExprGlobal>(); funcAsGlobal && funcAsGlobal->name == "shared")
+            return true;
+    }
+    else if (auto assertion = expr->as<Luau::AstExprTypeAssertion>())
+    {
+        return isShared(assertion->expr);
+    }
+
+    return false;
+}
+
 bool isMethod(const Luau::FunctionType* ftv)
 {
     if (ftv->hasSelf)

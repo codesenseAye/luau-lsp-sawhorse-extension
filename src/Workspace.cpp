@@ -159,6 +159,7 @@ void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAu
             // If we didn't retain type graphs, then the internalTypes arena is empty
             markFrontendDirty = false;
             frontend.markDirty(moduleName);
+            loadModuleSuggestions();
         }
 
         frontend.check(moduleName, Luau::FrontendOptions{/* retainFullTypeGraphs: */ true, forAutocomplete, /* runLintChecks: */ false});
@@ -223,6 +224,7 @@ void WorkspaceFolder::indexFiles(const ClientConfiguration& config)
                     // Parse the module to infer require data
                     // We do not perform any type checking here
                     frontend.parse(moduleName);
+                    loadModuleSuggestions();
 
                     markFrontendDirty = true;
                 }
@@ -298,13 +300,9 @@ void WorkspaceFolder::initialize()
         size_t sharedPos = definitionsContents->find(sharedChars.c_str());
 
         if (sharedPos != std::string::npos) {
-            std::cerr << sharedChars.size() << "\n";
-            std::cerr << sharedPos << "\n";
-            std::cerr << definitionsContents->c_str() << "\n";
             definitionsContents->erase(sharedPos, sharedChars.size() + 1);
             client->sendWindowMessage(lsp::MessageType::Error,
                 "Removed incorrect type in definitions file: " + definitionsFile.generic_string() + ".");
-            std::cerr << definitionsContents->c_str() << "\n";
         }
 
         // Parse definitions file metadata

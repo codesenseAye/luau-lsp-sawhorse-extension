@@ -6,6 +6,9 @@
 #include "LSP/Uri.hpp"
 #include "Protocol/Base.hpp"
 
+struct MarkupContent;
+struct MarkupKind;
+
 namespace lsp
 {
 using URI = Uri;

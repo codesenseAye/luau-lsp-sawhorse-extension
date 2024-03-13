@@ -262,6 +262,12 @@
           "default": false,
           "scope": "resource"
         },
+        "luau-lsp.inlayHints.images": {
+          "markdownDescription": "Show inlay hints for roblox images",
+          "type": "boolean",
+          "default": true,
+          "scope": "resource"
+        },
         "luau-lsp.inlayHints.parameterTypes": {
           "markdownDescription": "Show inlay hints for parameter types",
           "type": "boolean",
@@ -283,6 +289,12 @@
         },
         "luau-lsp.hover.enabled": {
           "markdownDescription": "Enable hover",
+          "type": "boolean",
+          "default": true,
+          "scope": "resource"
+        },
+        "luau-lsp.hover.images": {
+          "markdownDescription": "Show roblox images on hover",
           "type": "boolean",
           "default": true,
           "scope": "resource"
@@ -359,6 +371,14 @@
           "markdownDescription": "Suggest automatic imports in completion items",
           "type": "boolean",
           "default": false,
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use `#luau-lsp.completion.imports.enabled#` instead.",
+          "deprecationMessage": "Deprecated: Please use luau-lsp.completion.imports.enabled instead."
+        },
+        "luau-lsp.completion.suggestModules": {
+          "markdownDescription": "Suggest automatic module imports in completion items",
+          "type": "boolean",
+          "default": true,
           "scope": "resource",
           "markdownDeprecationMessage": "**Deprecated**: Please use `#luau-lsp.completion.imports.enabled#` instead.",
           "deprecationMessage": "Deprecated: Please use luau-lsp.completion.imports.enabled instead."

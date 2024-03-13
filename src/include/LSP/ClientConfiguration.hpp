@@ -51,13 +51,14 @@ struct ClientInlayHintsConfiguration
 {
     InlayHintsParameterNamesConfig parameterNames = InlayHintsParameterNamesConfig::None;
     bool variableTypes = false;
+    bool images = false;
     bool parameterTypes = false;
     bool functionReturnTypes = false;
     size_t typeHintMaxLength = 50;
 
     inline bool operator==(const ClientInlayHintsConfiguration& rhs) const
     {
-        return this->parameterNames == rhs.parameterNames && this->variableTypes == rhs.variableTypes && this->parameterTypes == rhs.parameterTypes &&
+        return this->parameterNames == rhs.parameterNames && this->images == rhs.images && this->variableTypes == rhs.variableTypes && this->parameterTypes == rhs.parameterTypes &&
                this->functionReturnTypes == rhs.functionReturnTypes && this->typeHintMaxLength == rhs.typeHintMaxLength;
     }
 
@@ -67,7 +68,7 @@ struct ClientInlayHintsConfiguration
     }
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
-    ClientInlayHintsConfiguration, parameterNames, variableTypes, parameterTypes, functionReturnTypes, typeHintMaxLength);
+    ClientInlayHintsConfiguration, parameterNames, variableTypes, images, parameterTypes, functionReturnTypes, typeHintMaxLength);
 
 struct ClientHoverConfiguration
 {
@@ -98,6 +99,8 @@ struct ClientCompletionImportsConfiguration
     bool enabled = false;
     /// Whether services should be suggested in auto-import
     bool suggestServices = true;
+    // Whether "shared" modules should be suggested in auto-import
+    bool suggestModules = true;
     /// Whether requires should be suggested in auto-import
     bool suggestRequires = true;
     /// The style of the auto-imported require
@@ -106,7 +109,7 @@ struct ClientCompletionImportsConfiguration
     bool separateGroupsWithLine = false;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
-    ClientCompletionImportsConfiguration, enabled, suggestServices, suggestRequires, requireStyle, separateGroupsWithLine);
+    ClientCompletionImportsConfiguration, enabled, suggestServices, suggestModules, suggestRequires, requireStyle, separateGroupsWithLine);
 
 struct ClientCompletionConfiguration
 {

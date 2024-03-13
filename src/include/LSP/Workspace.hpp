@@ -11,6 +11,8 @@
 #include "LSP/WorkspaceFileResolver.hpp"
 #include "LSP/LuauExt.hpp"
 
+#include <unordered_map>
+
 struct Reference
 {
     Luau::ModuleName moduleName;
@@ -22,7 +24,7 @@ struct Reference
     }
 };
 
-class WorkspaceFolder
+class   WorkspaceFolder
 {
 public:
     std::shared_ptr<Client> client;
@@ -89,7 +91,18 @@ private:
     std::vector<Luau::ModuleName> findReverseDependencies(const Luau::ModuleName& moduleName);
     bool markFrontendDirty = false;
 
+    struct CachedImport {
+        std::string fileName;
+        std::string truncatedFileName; // UIStory.story.lua -> UIStory.story -> UIStory !!!
+        std::string name;
+    };
+
+    void loadModuleSuggestions();
+    std::vector<CachedImport> cachedModuleImportResults{};
 public:
+    std::vector<size_t> loadedAssets{};
+    std::unordered_map<std::string, std::string> loadedAssetUrls{};
+
     std::vector<std::string> getComments(const Luau::ModuleName& moduleName, const Luau::Location& node);
     std::optional<std::string> getDocumentationForType(const Luau::TypeId ty);
     std::optional<std::string> getDocumentationForAutocompleteEntry(
@@ -104,7 +117,7 @@ public:
     lsp::ColorPresentationResult colorPresentation(const lsp::ColorPresentationParams& params);
     lsp::CodeActionResult codeAction(const lsp::CodeActionParams& params);
 
-    std::optional<lsp::Hover> hover(const lsp::HoverParams& params);
+    std::optional<lsp::Hover> hover(const lsp::HoverParams& params, std::optional<std::unordered_map<std::string, std::string>> loadedAssetUrls = std::nullopt);
 
     std::optional<lsp::SignatureHelp> signatureHelp(const lsp::SignatureHelpParams& params);
 

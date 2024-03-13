@@ -212,6 +212,15 @@ static lsp::TextEdit createRequireTextEdit(const std::string& name, const std::s
     return {range, importText};
 }
 
+static lsp::TextEdit createModuleTextEdit(const std::string& name, const std::string& propertyName, size_t lineNumber, bool appendNewline = false)
+{
+    auto range = lsp::Range{{lineNumber, 0}, {lineNumber, 0}};
+    auto importText = "local " + name + " = shared(\"" + propertyName + "\")\n";
+    if (appendNewline)
+        importText += "\n";
+    return {range, importText};
+}
+
 static lsp::TextEdit createServiceTextEdit(const std::string& name, size_t lineNumber, bool appendNewline = false)
 {
     auto range = lsp::Range{{lineNumber, 0}, {lineNumber, 0}};
@@ -231,6 +240,28 @@ static lsp::CompletionItem createSuggestService(const std::string& service, size
     item.detail = "Auto-import";
     item.documentation = {lsp::MarkupKind::Markdown, codeBlock("luau", textEdit.newText)};
     item.insertText = service;
+    item.sortText = SortText::AutoImports;
+
+    item.additionalTextEdits.emplace_back(textEdit);
+
+    return item;
+}
+
+static lsp::CompletionItem createSuggestModule(const std::string& moduleName, const std::string& variableModuleName, size_t lineNumber, bool appendNewline = false)
+{
+    auto textEdit = createModuleTextEdit(variableModuleName, moduleName, lineNumber, appendNewline);
+    lsp::CompletionItem item;
+
+    if (strcmp(moduleName.c_str(), variableModuleName.c_str()) == 0) {
+        item.label = moduleName;
+    } else {
+        item.label = variableModuleName + "(" + moduleName + ")";
+    }
+    
+    item.kind = lsp::CompletionItemKind::Class;
+    item.detail = "Module Auto-import";
+    item.documentation = {lsp::MarkupKind::Markdown, codeBlock("luau", textEdit.newText)};
+    item.insertText = variableModuleName;
     item.sortText = SortText::AutoImports;
 
     item.additionalTextEdits.emplace_back(textEdit);
@@ -284,6 +315,45 @@ static std::string optimiseAbsoluteRequire(const std::string& path)
     return path;
 }
 
+void WorkspaceFolder::loadModuleSuggestions() {
+    cachedModuleImportResults.clear();
+    
+    for (auto sourceModule : frontend.sourceModules)
+    {
+        std::filesystem::path modulePath(sourceModule.second->name);
+        std::string fileName = modulePath.stem().generic_string();
+
+        if (fileName == "init") {
+            fileName = modulePath.parent_path().stem().generic_string();
+        }
+
+        bool alreadyAdded = false;
+
+        // some modules are in multiple places so we need to not add them twice
+        for (auto import : cachedModuleImportResults) {
+            if (strcmp(import.fileName.c_str(), fileName.c_str()) == 0) {
+                alreadyAdded = true;
+                break;
+            }
+        }
+
+        if (alreadyAdded) {
+            continue;
+        }
+
+        // for things like SHTracker.story.lua
+        // we dont want it to make the variable name something like SHTracker.story (because that would make a syntax error)
+        size_t dot = fileName.find(".");
+        std::string truncated = fileName;
+
+        if (dot != std::string::npos) {
+            truncated = fileName.substr(0, dot);
+        }
+
+        cachedModuleImportResults.push_back({fileName, truncated, sourceModule.second->name});
+    }
+}
+
 void WorkspaceFolder::suggestImports(const Luau::ModuleName& moduleName, const Luau::Position& position, const ClientConfiguration& config,
     const TextDocument& textDocument, std::vector<lsp::CompletionItem>& result, bool includeServices)
 {
@@ -328,6 +398,23 @@ void WorkspaceFolder::suggestImports(const Luau::ModuleName& moduleName, const L
                 appendNewline = true;
 
             result.emplace_back(createSuggestService(service, lineNumber, appendNewline));
+        }
+    }
+
+    if (config.completion.imports.suggestModules && includeServices)
+    {
+        for (auto moduleResult : cachedModuleImportResults) {
+            if (contains(importsVisitor.moduleLineMap, moduleResult.fileName))
+                continue;
+
+            size_t lineNumber = importsVisitor.findBestLineForModule(moduleResult.name, hotCommentsLineNumber);
+
+            bool appendNewline = false;
+            if (config.completion.imports.separateGroupsWithLine && importsVisitor.firstRequireLine &&
+                importsVisitor.firstRequireLine.value() - lineNumber == 0)
+                appendNewline = true;
+
+            result.emplace_back(createSuggestModule(moduleResult.fileName, moduleResult.truncatedFileName, lineNumber, appendNewline));
         }
     }
 

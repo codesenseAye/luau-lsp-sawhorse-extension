@@ -1,3 +1,4 @@
+#define CPPHTTPLIB_OPENSSL_SUPPORT
 #include "LSP/LanguageServer.hpp"
 #include "LSP/Workspace.hpp"
 
@@ -6,6 +7,13 @@
 #include "Luau/ToString.h"
 #include "Luau/Transpiler.h"
 #include "LSP/LuauExt.hpp"
+#include "Protocol/httplib.h"
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "libcrypto.lib")
+#pragma comment(lib, "libssl.lib")
+
+struct MarkupContent;
+struct MarkupKind;
 
 bool isLiteral(const Luau::AstExpr* expr)
 {
@@ -42,6 +50,9 @@ struct InlayHintVisitor : public Luau::AstVisitor
     const ClientConfiguration& config;
     const TextDocument* textDocument;
     std::vector<lsp::InlayHint> hints{};
+    std::vector<size_t> loadedAssets{};
+    std::vector<size_t> generatedAssets{};
+    std::unordered_map<std::string, std::string> loadedAssetUrls{};
     Luau::ToStringOptions stringOptions;
 
     explicit InlayHintVisitor(const Luau::ModulePtr& module, const ClientConfiguration& config, const TextDocument* textDocument)
@@ -52,6 +63,58 @@ struct InlayHintVisitor : public Luau::AstVisitor
     {
         stringOptions.maxTableLength = 30;
         stringOptions.maxTypeLength = config.inlayHints.typeHintMaxLength;
+    }
+
+    bool visit(Luau::AstExprConstantString* str) override
+    {
+        if (!config.inlayHints.images)
+            return true;
+
+        std::string asset = std::string(str->value.data, str->value.size);
+        std::string assetLead = "rbxassetid://";
+
+        size_t start = asset.find(assetLead);
+        
+        if (start != std::string::npos) {
+            size_t length = assetLead.length();
+            std::string assetId = asset.substr(length);
+            size_t id = std::stoull(assetId.c_str());
+
+            if (std::find(loadedAssets.begin(), loadedAssets.end(), id) != loadedAssets.end()) {
+                // already added
+                return true;
+            }
+
+            std::string fetchLink = "https://thumbnails.roblox.com";
+            std::optional<std::string> resolvedLink = std::nullopt;
+
+            try
+            {
+                httplib::Client cli(fetchLink);
+                auto response = cli.Get("/v1/assets?assetIds=" + assetId + "&size=110x110&format=Png");
+
+                if (response->status != httplib::StatusCode::OK_200) {
+                    std::cerr << "Image fetch returned non-200 status code" << '\n';
+                    return true;
+                }
+
+                auto jsonBody = json::parse(response->body);
+                std::string url = jsonBody["data"][0]["imageUrl"].dump();
+                resolvedLink = url.substr(1, url.length() - 2);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Request failed, error: " << e.what() << '\n';
+            }
+
+            if (resolvedLink) {
+                generatedAssets.push_back(id);
+                loadedAssets.push_back(id);
+                loadedAssetUrls[assetId] = resolvedLink.value();
+            }
+        }
+
+        return true;
     }
 
     bool visit(Luau::AstStatLocal* local) override
@@ -307,7 +370,17 @@ lsp::InlayHintResult WorkspaceFolder::inlayHint(const lsp::InlayHintParams& para
         return {};
 
     InlayHintVisitor visitor{module, config, textDocument};
+    visitor.loadedAssets = loadedAssets;
     visitor.visit(sourceModule->root);
+
+    for (size_t generated : visitor.generatedAssets) {
+        loadedAssets.push_back(generated);
+    }
+
+    for (auto [assetId, url] : visitor.loadedAssetUrls) {
+        loadedAssetUrls[std::string(assetId)] = std::string(url);
+    }
+    
     return visitor.hints;
 }
 
