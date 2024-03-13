@@ -295,7 +295,6 @@ std::optional<lsp::Hover> WorkspaceFolder::hover(const lsp::HoverParams& params,
 
         if (config.inlayHints.images) {
             if (loadedAssetUrls.has_value()) {
-                std::cerr << "enabled" << "\n";
                 std::string asset = std::string(string->value.data, string->value.size);
                 std::string assetLead = "rbxassetid://";
 
@@ -313,8 +312,6 @@ std::optional<lsp::Hover> WorkspaceFolder::hover(const lsp::HoverParams& params,
                     }
                 }
             }
-        } else {
-            std::cerr << "disabled" << "\n";
         }
     }
     else
