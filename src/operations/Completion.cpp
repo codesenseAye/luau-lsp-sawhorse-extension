@@ -247,7 +247,7 @@ static lsp::CompletionItem createSuggestService(const std::string& service, size
     return item;
 }
 
-static lsp::CompletionItem createSuggestModule(const std::string& moduleName, const std::string& variableModuleName, size_t lineNumber, bool appendNewline = false)
+static lsp::CompletionItem createSuggestModule(const std::string& moduleName, const std::string& variableModuleName, std::string path, size_t lineNumber, bool appendNewline = false)
 {
     auto textEdit = createModuleTextEdit(variableModuleName, moduleName, lineNumber, appendNewline);
     lsp::CompletionItem item;
@@ -260,7 +260,7 @@ static lsp::CompletionItem createSuggestModule(const std::string& moduleName, co
     
     item.kind = lsp::CompletionItemKind::Class;
     item.detail = "Module Auto-import";
-    item.documentation = {lsp::MarkupKind::Markdown, codeBlock("luau", textEdit.newText)};
+    item.documentation = {lsp::MarkupKind::Markdown, codeBlock("luau", textEdit.newText) + "\n" + path};
     item.insertText = variableModuleName;
     item.sortText = SortText::AutoImports;
 
@@ -317,6 +317,9 @@ static std::string optimiseAbsoluteRequire(const std::string& path)
 
 void WorkspaceFolder::loadModuleSuggestions() {
     cachedModuleImportResults.clear();
+
+    std::vector<WorkspaceFolder::ModuleFolder> moduleFolders{};
+    std::vector<WorkspaceFolder::CachedImport> unfilteredImports{};
     
     for (auto sourceModule : frontend.sourceModules)
     {
@@ -325,6 +328,7 @@ void WorkspaceFolder::loadModuleSuggestions() {
 
         if (fileName == "init") {
             fileName = modulePath.parent_path().stem().generic_string();
+            moduleFolders.push_back({modulePath.parent_path(), modulePath});
         }
 
         bool alreadyAdded = false;
@@ -350,7 +354,36 @@ void WorkspaceFolder::loadModuleSuggestions() {
             truncated = fileName.substr(0, dot);
         }
 
-        cachedModuleImportResults.push_back({fileName, truncated, sourceModule.second->name});
+        // currently its still possible for the variable name to contain non-alphanumerical characters
+
+        unfilteredImports.push_back({fileName, truncated, sourceModule.second->name});
+    }
+
+    // see if any module is within a module folder and that isnt the source file (init.lua)
+    // carpenter doesnt go any deeper than 1 module so you wouldnt be able to access it this way anyways
+    for (auto import : unfilteredImports) {
+        // cachedModuleImportResults
+        bool inaccessible = false;
+        
+        for (auto moduleFolder : moduleFolders) {
+            size_t location = import.name.find(moduleFolder.folderPath.generic_string());
+            
+            if (location == std::string::npos) {
+                continue;
+            }
+
+            if (import.name == moduleFolder.sourcePath.generic_string()) {
+                continue;
+            } 
+
+            inaccessible = true;
+        }
+
+        if (inaccessible) {
+            continue;
+        }
+
+        cachedModuleImportResults.push_back(import);
     }
 }
 
@@ -414,7 +447,7 @@ void WorkspaceFolder::suggestImports(const Luau::ModuleName& moduleName, const L
                 importsVisitor.firstRequireLine.value() - lineNumber == 0)
                 appendNewline = true;
 
-            result.emplace_back(createSuggestModule(moduleResult.fileName, moduleResult.truncatedFileName, lineNumber, appendNewline));
+            result.emplace_back(createSuggestModule(moduleResult.fileName, moduleResult.truncatedFileName, moduleResult.name, lineNumber, appendNewline));
         }
     }
 

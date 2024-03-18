@@ -91,6 +91,11 @@ private:
     std::vector<Luau::ModuleName> findReverseDependencies(const Luau::ModuleName& moduleName);
     bool markFrontendDirty = false;
 
+    struct ModuleFolder {
+        std::filesystem::path folderPath; // thingy
+        std::filesystem::path sourcePath; // thingy/init.lua
+    };
+
     struct CachedImport {
         std::string fileName;
         std::string truncatedFileName; // UIStory.story.lua -> UIStory.story -> UIStory !!!
