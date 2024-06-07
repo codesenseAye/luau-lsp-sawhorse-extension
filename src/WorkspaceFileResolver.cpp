@@ -411,8 +411,10 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getMatchFromString(const 
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::resolveModule(const Luau::ModuleInfo* context, Luau::AstExpr* node, Luau::SourceModule*sourceModule)
 {
     // Handle require("path") for compatibility
+    auto config = client->getConfiguration(rootUri);
 
-    if (currentRequireData) {
+    if (currentRequireData && config.completion.imports.commentModuleBackwardCompatibilityEnabled) {
+    // if (currentRequireData) {
         try {
             std::optional<Luau::HotComment> comment = getHotComment(currentRequireData->currentSourceComments, node->location.begin);
 

@@ -1,4 +1,11 @@
+#if __has_include(<openssl/err.h>)
 #define CPPHTTPLIB_OPENSSL_SUPPORT
+#include "Protocol/httplib.h"
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "libcrypto.lib")
+#pragma comment(lib, "libssl.lib")
+#endif
+
 #include "LSP/LanguageServer.hpp"
 #include "LSP/Workspace.hpp"
 
@@ -7,10 +14,6 @@
 #include "Luau/ToString.h"
 #include "Luau/Transpiler.h"
 #include "LSP/LuauExt.hpp"
-#include "Protocol/httplib.h"
-#pragma comment(lib, "Ws2_32.lib")
-#pragma comment(lib, "libcrypto.lib")
-#pragma comment(lib, "libssl.lib")
 
 struct MarkupContent;
 struct MarkupKind;
@@ -65,6 +68,7 @@ struct InlayHintVisitor : public Luau::AstVisitor
         stringOptions.maxTypeLength = config.inlayHints.typeHintMaxLength;
     }
 
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
     bool visit(Luau::AstExprConstantString* str) override
     {
         if (!config.inlayHints.images)
@@ -78,6 +82,13 @@ struct InlayHintVisitor : public Luau::AstVisitor
         if (start != std::string::npos) {
             size_t length = assetLead.length();
             std::string assetId = asset.substr(length);
+
+            if (!std::all_of(assetId.begin(), assetId.end(), [](char c){ return std::isdigit(c); })) {
+                // malformed asset id
+                // it should contain all numbers
+                return true;
+            }
+
             size_t id = std::stoull(assetId.c_str());
 
             if (std::find(loadedAssets.begin(), loadedAssets.end(), id) != loadedAssets.end()) {
@@ -116,6 +127,7 @@ struct InlayHintVisitor : public Luau::AstVisitor
 
         return true;
     }
+#endif
 
     bool visit(Luau::AstStatLocal* local) override
     {

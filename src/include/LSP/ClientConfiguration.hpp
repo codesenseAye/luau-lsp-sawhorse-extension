@@ -103,13 +103,15 @@ struct ClientCompletionImportsConfiguration
     bool suggestModules = true;
     /// Whether requires should be suggested in auto-import
     bool suggestRequires = true;
+    /// Whether a backwards compatibility option is enabled
+    bool commentModuleBackwardCompatibilityEnabled = false;
     /// The style of the auto-imported require
     ImportRequireStyle requireStyle = ImportRequireStyle::Auto;
     /// Whether services and requires should be separated by an empty line
     bool separateGroupsWithLine = false;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
-    ClientCompletionImportsConfiguration, enabled, suggestServices, suggestModules, suggestRequires, requireStyle, separateGroupsWithLine);
+    ClientCompletionImportsConfiguration, enabled, suggestServices, suggestModules, suggestRequires, commentModuleBackwardCompatibilityEnabled, requireStyle, separateGroupsWithLine);
 
 struct ClientCompletionConfiguration
 {

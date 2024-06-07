@@ -279,8 +279,6 @@ void WorkspaceFolder::initialize()
     Luau::attachTag(Luau::getGlobalBinding(frontend.globalsForAutocomplete, "require"), "Require");
     Luau::attachTag(Luau::getGlobalBinding(frontend.globalsForAutocomplete, "shared"), "Shared");
 
-    // GetCurrentProcessId() gdb
-
     if (client->definitionsFiles.empty())
         client->sendLogMessage(lsp::MessageType::Warning, "No definitions file provided by client");
 
