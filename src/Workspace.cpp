@@ -166,8 +166,8 @@ void WorkspaceFolder::checkStrict(const Luau::ModuleName& moduleName, bool forAu
 
         fileResolver.currentRequireData->sourceModules.clear();
         
-        for (auto [name, _] : frontend.sourceNodes) {
-            std::string newName(name.data(), name.size());
+        for (auto [name, data] : frontend.sourceNodes) {
+            std::string newName(data->name.data(), data->name.size());
             fileResolver.currentRequireData->sourceModules.emplace_back(newName);
         }
 

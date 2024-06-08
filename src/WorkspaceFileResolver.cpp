@@ -343,8 +343,15 @@ bool WorkspaceFileResolver::matchQueryToPieces(std::vector<std::string_view> que
 std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(const Luau::ModuleName name, std::string fullQuery, std::vector<std::string_view> query, size_t queryNum) {
     try
     {
-        auto shortenName = name.substr(name.find_first_of(rootUri.path) + rootUri.path.length());
-        shortenName = shortenName.substr(0, shortenName.find_last_of("."));
+        auto drive = rootUri.path.substr(1, 3);
+        auto nameDrive = name.substr(0, 3);
+        std::string shortenName = name;
+
+        // this checks if the modulename is a file path instead of a game path (game/ReplicatedStorage etc)
+        if (strcmp(drive.c_str(), nameDrive.c_str()) == 0) {
+            shortenName = name.substr(name.find_first_of(rootUri.path) + rootUri.path.length());
+            shortenName = shortenName.substr(0, shortenName.find_last_of("."));
+        }
 
         std::vector<std::string_view> pieces = Luau::split(shortenName, '/');
         
@@ -352,6 +359,10 @@ std::optional<Luau::ModuleInfo> WorkspaceFileResolver::getSpecificModuleMatch(co
 
         for(size_t i : indices(pieces)) {
             piecesNum += 1;
+        }
+
+        if (piecesNum == 0) {
+            return std::nullopt;
         }
 
         bool matches = matchQueryToPieces(query, queryNum, pieces, piecesNum);
