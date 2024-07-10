@@ -3,6 +3,7 @@ set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")
 project(Luau.LanguageServer LANGUAGES CXX)
 
 option(LUAU_ENABLE_TIME_TRACE "Build with Luau TimeTrace" OFF)
+option(LSP_BUILD_ASAN "Build with ASAN" OFF)
 
 add_subdirectory(luau)
 add_library(Luau.LanguageServer STATIC)
@@ -15,15 +16,25 @@ target_sources(Luau.LanguageServer PRIVATE
         src/Uri.cpp
         src/WorkspaceFileResolver.cpp
         src/Workspace.cpp
-        src/Sourcemap.cpp
         src/TextDocument.cpp
         src/Client.cpp
         src/DocumentationParser.cpp
         src/LuauExt.cpp
         src/IostreamHelpers.cpp
         src/Utils.cpp
-        src/StudioPlugin.cpp
+        src/Flags.cpp
+        src/JsonTomlSyntaxParser.cpp
         src/CliConfigurationParser.cpp
+        src/platform/LSPPlatform.cpp
+        src/platform/roblox/RobloxCodeAction.cpp
+        src/platform/roblox/RobloxColorProvider.cpp
+        src/platform/roblox/RobloxCompletion.cpp
+        src/platform/roblox/RobloxFileResolver.cpp
+        src/platform/roblox/RobloxLanguageServer.cpp
+        src/platform/roblox/RobloxLuauExt.cpp
+        src/platform/roblox/RobloxSourcemap.cpp
+        src/platform/roblox/RobloxSourceNode.cpp
+        src/platform/roblox/RobloxStudioPlugin.cpp
         src/operations/Diagnostics.cpp
         src/operations/Completion.cpp
         src/operations/DocumentSymbol.cpp
@@ -52,7 +63,7 @@ target_sources(Luau.LanguageServer.Test PRIVATE
         tests/main.cpp
         tests/Fixture.cpp
         tests/Autocomplete.test.cpp
-        tests/Diagnostics.test.cpp
+        tests/MagicFunctions.test.cpp
         tests/Documentation.test.cpp
         tests/TextDocument.test.cpp
         tests/Uri.test.cpp
@@ -66,17 +77,44 @@ target_sources(Luau.LanguageServer.Test PRIVATE
         tests/LuauExt.test.cpp
         tests/CliConfigurationParser.test.cpp
         tests/Hover.test.cpp
+        tests/LanguageServer.test.cpp
+        tests/InlayHints.test.cpp
+        tests/JsonTomlSyntaxParser.test.cpp
 )
 
 # TODO: Set Luau.Analysis at O2 to speed up debugging
 if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE INTERNAL "") # Statically link to MSVCRT
     list(APPEND LUAU_LSP_OPTIONS /W3 /WX /D_CRT_SECURE_NO_WARNINGS)
     list(APPEND LUAU_LSP_OPTIONS /MP) # Distribute compilation across multiple cores
 else ()
     list(APPEND LUAU_LSP_OPTIONS -Wall -Werror)
 endif ()
 
-set(EXTERN_INCLUDES extern/json/include extern/glob/single_include extern/argparse/include)
+if (LSP_BUILD_ASAN)
+    if (MSVC)
+        list(APPEND LUAU_LSP_OPTIONS /fsanitize=address)
+        target_compile_options(Luau.Ast PRIVATE /fsanitize=address)
+        target_compile_options(Luau.Analysis PRIVATE /fsanitize=address)
+        target_compile_options(Luau.Compiler PRIVATE /fsanitize=address)
+        target_compile_options(Luau.Config PRIVATE /fsanitize=address)
+    else ()
+        list(APPEND LUAU_LSP_OPTIONS -fsanitize=address)
+        target_compile_options(Luau.Ast PRIVATE -fsanitize=address)
+        target_compile_options(Luau.Analysis PRIVATE -fsanitize=address)
+        target_compile_options(Luau.Compiler PRIVATE -fsanitize=address)
+        target_compile_options(Luau.Config PRIVATE -fsanitize=address)
+        target_link_options(Luau.LanguageServer PRIVATE -fsanitize=address)
+        target_link_options(Luau.LanguageServer.CLI PRIVATE -fsanitize=address)
+        target_link_options(Luau.LanguageServer.Test PRIVATE -fsanitize=address)
+        target_link_options(Luau.Ast PRIVATE -fsanitize=address)
+        target_link_options(Luau.Analysis PRIVATE -fsanitize=address)
+        target_link_options(Luau.Compiler PRIVATE -fsanitize=address)
+        target_link_options(Luau.Config PRIVATE -fsanitize=address)
+    endif ()
+endif ()
+
+set(EXTERN_INCLUDES extern/json/include extern/glob/single_include extern/argparse/include extern/toml/include)
 
 target_compile_features(Luau.LanguageServer PUBLIC cxx_std_17)
 target_compile_options(Luau.LanguageServer PRIVATE ${LUAU_LSP_OPTIONS})

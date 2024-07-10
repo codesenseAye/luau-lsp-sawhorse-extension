@@ -1,5 +1,5 @@
 #include "doctest.h"
-#include "LSP/Sourcemap.hpp"
+#include "Platform/RobloxPlatform.hpp"
 
 TEST_SUITE_BEGIN("SourcemapTests");
 
@@ -17,6 +17,14 @@ TEST_CASE("getScriptFilePath returns json file if node is populated by JSON")
     node.className = "ModuleScript";
     node.filePaths = {"test.json"};
     CHECK_EQ(node.getScriptFilePath(), "test.json");
+}
+
+TEST_CASE("getScriptFilePath returns toml file if node is populated by TOML")
+{
+    SourceNode node;
+    node.className = "ModuleScript";
+    node.filePaths = {"test.toml"};
+    CHECK_EQ(node.getScriptFilePath(), "test.toml");
 }
 
 TEST_CASE("getScriptFilePath doesn't pick .meta.json")

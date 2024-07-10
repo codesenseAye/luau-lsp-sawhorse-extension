@@ -47,10 +47,20 @@ documentation file.
 
 The Luau project makes use of FFlags to gate and dynamically enable new features when they are released.
 
-For the Luau Language Server, FFlags are defined on the command line:
+For the Luau Language Server, FFlags can be defined on the command line or by using [initialization options](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeParams):
 
 ```sh
 $ luau-lsp lsp --flag:NAME=VALUE
+```
+
+```json
+{
+  "initializationOptions": {
+    "fflags": {
+      "Foo": "True"
+    }
+  }
+}
 ```
 
 By default, all FFlags are enabled, apart from those that are [defined as experimental](https://github.com/luau-lang/luau/blob/master/Common/include/Luau/ExperimentalFlags.h).
@@ -70,6 +80,28 @@ To view all available FFlags, run:
 ```sh
 $ luau-lsp --show-flags
 ```
+
+## Configuration in `initializationOptions`
+
+Similar to [rust-analyzer](https://github.com/rust-lang/rust-analyzer/blob/master/docs/dev/lsp-extensions.md#configuration-in-initializationoptions),
+it is highly recommended to pass the `luau-lsp` configuration as part of initialization options, in the following format:
+
+```json
+{
+  "initializationOptions": {
+    "config": {
+      "default": { ... }
+      [workspaceFolder.uri]: {
+        ...
+      }
+    }
+  }
+}
+```
+
+This is primarily used to configure the `platform` used for the language server. If not provided, the language server
+will default to a standard Luau configuration, then update once configuration is received normally via the server.
+This may mean erroneous diagnostics or other intellisense are sent during this window (which is typically short).
 
 ## Optional: Custom `$/command` definition
 

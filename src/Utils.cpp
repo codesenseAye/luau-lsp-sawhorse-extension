@@ -1,5 +1,6 @@
 #include "LSP/Utils.hpp"
 #include "Luau/StringUtils.h"
+#include "Platform/RobloxPlatform.hpp"
 #include <algorithm>
 #include <fstream>
 
@@ -149,6 +150,13 @@ bool isDataModel(const std::string& path)
 void trim_start(std::string& str)
 {
     str.erase(0, str.find_first_not_of(" \n\r\t"));
+}
+
+std::string removePrefix(const std::string& str, const std::string& prefix)
+{
+    if (Luau::startsWith(str, prefix))
+        return str.substr(prefix.length());
+    return str;
 }
 
 

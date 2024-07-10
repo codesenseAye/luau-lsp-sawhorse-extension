@@ -24,21 +24,21 @@ jobs:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: true
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 16.x
+          node-version: 20
 
       - name: Build Server
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DLUAU_ENABLE_TIME_TRACE=ON ..
-          cmake --build . --config Release --target Luau.LanguageServer.CLI -j 3
+          cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DLUAU_ENABLE_TIME_TRACE=ON ..
+          cmake --build . --config RelWithDebInfo --target Luau.LanguageServer.CLI -j 3
 
       - name: (MacOS) Verify universal build
         if: matrix.os == 'macos-latest'
@@ -50,7 +50,8 @@ jobs:
           mkdir -p ./dist
           mkdir -p editors/code/bin
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp build/Release/luau-lsp.exe editors/code/bin/server.exe
+            cp build/RelWithDebInfo/luau-lsp.exe editors/code/bin/server.exe
+            cp build/RelWithDebInfo/luau-lsp.pdb editors/code/bin/server.pdb
           else
             cp build/luau-lsp editors/code/bin/server
             chmod 777 editors/code/bin/server
@@ -61,7 +62,7 @@ jobs:
         run: |
           mkdir staging
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp "build/Release/luau-lsp.exe" staging/
+            cp "build/RelWithDebInfo/luau-lsp.exe" staging/
             cd staging
             7z a ../dist/server.zip *
           else
@@ -88,7 +89,7 @@ jobs:
         run: npx vsce package -o "../../dist/${{ matrix.artifact-name }}.vsix"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: nightly-${{ matrix.artifact-name }}
           path: ./dist
